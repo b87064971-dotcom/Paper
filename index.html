@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Block Tycoon Minecraft</title>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+
+    /* joystick */
+    #joystickBase {
+      position: absolute;
+      bottom: 60px;
+      left: 60px;
+      width: 120px;
+      height: 120px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 50%;
+      touch-action: none;
+    }
+
+    #joystick {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 50%;
+      left: 35px;
+      top: 35px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="joystickBase">
+  <div id="joystick"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script>
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// light
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5, 10, 5);
+scene.add(light);
+
+// ground
+const ground = new THREE.Mesh(
+  new THREE.BoxGeometry(50, 1, 50),
+  new THREE.MeshStandardMaterial({ color: 0x3cb043 })
+);
+ground.position.y = -1;
+scene.add(ground);
+
+// player
+const player = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial({ color: 0xff0000 })
+);
+scene.add(player);
+
+// blocks
+const blocks = [];
+const blockGeo = new THREE.BoxGeometry(1,1,1);
+const blockMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+
+function addBlock(x,y,z){
+  const b = new THREE.Mesh(blockGeo, blockMat);
+  b.position.set(x,y,z);
+  scene.add(b);
+  blocks.push(b);
+}
+
+// start platform
+for(let x=-3;x<=3;x++){
+  for(let z=-3;z<=3;z++){
+    addBlock(x,0,z);
+  }
+}
+
+camera.position.set(0,5,8);
+
+// joystick
+let joyX = 0;
+let joyY = 0;
+let active = false;
+
+const base = document.getElementById("joystickBase");
+const stick = document.getElementById("joystick");
+
+function moveStick(x,y){
+  stick.style.left = (35 + x) + "px";
+  stick.style.top = (35 + y) + "px";
+}
+
+base.addEventListener("touchstart", ()=>active=true);
+base.addEventListener("touchend", ()=>{
+  active=false;
+  joyX=0; joyY=0;
+  moveStick(35,35);
+});
+
+base.addEventListener("touchmove", (e)=>{
+  if(!active) return;
+
+  const t = e.touches[0];
+  const rect = base.getBoundingClientRect();
+
+  let x = t.clientX - rect.left - 60;
+  let y = t.clientY - rect.top - 60;
+
+  const max = 40;
+  const dist = Math.min(max, Math.hypot(x,y));
+  const angle = Math.atan2(y,x);
+
+  joyX = Math.cos(angle) * dist / max;
+  joyY = Math.sin(angle) * dist / max;
+
+  moveStick(35 + joyX*40, 35 + joyY*40);
+});
+
+// block placing (tap anywhere)
+window.addEventListener("click", (e)=>{
+  const x = Math.round(player.position.x);
+  const z = Math.round(player.position.z);
+  addBlock(x,0,z);
+});
+
+// movement
+function animate(){
+  requestAnimationFrame(animate);
+
+  player.position.x += joyX * 0.15;
+  player.position.z += joyY * 0.15;
+
+  camera.position.x = player.position.x;
+  camera.position.z = player.position.z + 8;
+  camera.position.y = player.position.y + 5;
+  camera.lookAt(player.position);
+
+  renderer.render(scene,camera);
+}
+
+animate();
+</script>
+
+</body>
+</html>
